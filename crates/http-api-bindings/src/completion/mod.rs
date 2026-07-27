@@ -67,7 +67,10 @@ const OPENAI_LEGACY_COMPLETION_FIM_ALIASES: [&str; 3] = [
 pub fn build_completion_prompt(model: &HttpModelConfig) -> (Option<String>, Option<String>) {
     match model.kind.as_str() {
         x if x == "mistral/completion" || OPENAI_LEGACY_COMPLETION_FIM_ALIASES.contains(&x) => {
-            (Some(FIM_TEMPLATE.to_owned()), None)
+            // Use user-configured prompt_template if provided, otherwise fall back to default FIM_TEMPLATE
+            let template = model.prompt_template.clone()
+                .unwrap_or_else(|| FIM_TEMPLATE.to_owned());
+            (Some(template), None)
         }
         _ => (model.prompt_template.clone(), model.chat_template.clone()),
     }
