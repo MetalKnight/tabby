@@ -721,7 +721,7 @@ mod tests {
             "file:///home/TabbyML/tabby"
         );
 
-        // Nuovi test per supporto SSH (git@...)
+        // new tests for SSH syntax support (git@...)
         assert_eq!(
             RepositoryConfig::canonicalize_url("git@github.com:TabbyML/tabby.git"),
             "https://github.com/TabbyML/tabby"
