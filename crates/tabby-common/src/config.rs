@@ -178,13 +178,25 @@ impl RepositoryConfig {
 
     pub fn canonicalize_url(url: &str) -> String {
         let url = url.strip_suffix(".git").unwrap_or(url);
-        url::Url::parse(url)
+
+        // Handle SSH SCP-like syntax (git@domain.com:owner/repo)
+        let prepared_url = if let Some(ssh_path) = url.strip_prefix("git@") {
+            if let Some((host, path)) = ssh_path.split_once(':') {
+                format!("https://{}/{}", host, path)
+            } else {
+                format!("https://{}", ssh_path)
+            }
+        } else {
+            url.to_string()
+        };
+
+        url::Url::parse(&prepared_url)
             .map(|mut url| {
                 let _ = url.set_password(None);
                 let _ = url.set_username("");
                 url.to_string()
             })
-            .unwrap_or_else(|_| url.to_string())
+            .unwrap_or_else(|_| prepared_url)
     }
 
     pub fn dir(&self) -> PathBuf {
@@ -707,6 +719,17 @@ mod tests {
         assert_eq!(
             RepositoryConfig::canonicalize_url("file:///home/TabbyML/tabby"),
             "file:///home/TabbyML/tabby"
+        );
+
+        // Nuovi test per supporto SSH (git@...)
+        assert_eq!(
+            RepositoryConfig::canonicalize_url("git@github.com:TabbyML/tabby.git"),
+            "https://github.com/TabbyML/tabby"
+        );
+
+        assert_eq!(
+            RepositoryConfig::canonicalize_url("git@github.com:TabbyML/tabby"),
+            "https://github.com/TabbyML/tabby"
         );
     }
 }
