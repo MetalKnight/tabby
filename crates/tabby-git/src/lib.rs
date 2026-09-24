@@ -152,7 +152,11 @@ pub fn sync_refs(root: &Path, url: &str, refs: &Vec<String>) -> anyhow::Result<(
                 .status()?
         };
         if !status.success() {
-            return Err(anyhow::anyhow!("Failed to fetch origin {}", branch));
+            warn!(
+                "Failed to fetch origin `{}` for `{}`, skipping ref.",
+                branch, url
+            );
+            continue;
         }
     }
 
