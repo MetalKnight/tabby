@@ -57,10 +57,16 @@ impl SchedulerGitJob {
         git_repository: Arc<dyn GitRepositoryService>,
         job: Arc<dyn JobService>,
     ) -> tabby_schema::Result<()> {
+        let config = Config::load().unwrap_or_default();
+
+        if config.scheduler.disabled {
+            debug!("Scheduler disabled via config, skipping git repository indexing");
+            return Ok(());
+        }
+
         // Read git repositories from config file.
-        let config_repositories = Config::load()
-            .map(|config| config.repositories)
-            .unwrap_or_default()
+        let config_repositories = config
+            .repositories
             .into_iter()
             .enumerate()
             .map(|(index, x)| {

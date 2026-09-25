@@ -25,7 +25,7 @@ use index_pages::SyncPageIndexJob;
 use juniper::ID;
 use license_check::LicenseCheckJob;
 use serde::{Deserialize, Serialize};
-use tabby_common::config::CodeRepository;
+use tabby_common::config::{CodeRepository, Config};
 use tabby_db::DbConn;
 use tabby_inference::Embedding;
 use tabby_schema::{
@@ -228,9 +228,20 @@ pub async fn start(
     notification_service: Arc<dyn NotificationService>,
     embedding: Option<Arc<dyn Embedding>>,
 ) {
-    let mut hourly =
-        CronStream::new(Schedule::from_str("@hourly").expect("Invalid cron expression"))
-            .into_stream();
+    let scheduler_cron = Config::load()
+        .ok()
+        .map(|c| c.scheduler.cron_schedule().to_owned())
+        .unwrap_or_else(|| "@hourly".to_owned());
+
+    let hourly_schedule = Schedule::from_str(&scheduler_cron).unwrap_or_else(|err| {
+        warn!(
+            "Invalid scheduler.cron expression {:?}: {}. Falling back to @hourly.",
+            scheduler_cron, err
+        );
+        Schedule::from_str("@hourly").expect("@hourly is always valid")
+    });
+
+    let mut hourly = CronStream::new(hourly_schedule).into_stream();
 
     let mut daily = CronStream::new(Schedule::from_str("@daily").expect("Invalid cron expression"))
         .into_stream();

@@ -7,7 +7,7 @@ use futures::{stream::BoxStream, StreamExt};
 use issues::{list_github_issues, list_gitlab_issues};
 use juniper::ID;
 use serde::{Deserialize, Serialize};
-use tabby_common::config::CodeRepository;
+use tabby_common::config::{CodeRepository, Config};
 use tabby_index::public::{CodeIndexer, StructuredDoc, StructuredDocIndexer, StructuredDocState};
 use tabby_inference::Embedding;
 use tabby_schema::{
@@ -55,6 +55,11 @@ impl SyncIntegrationJob {
         integration: Arc<dyn IntegrationService>,
         job: Arc<dyn JobService>,
     ) -> tabby_schema::Result<()> {
+        if Config::load().unwrap_or_default().scheduler.disabled {
+            debug!("Scheduler disabled via config, skipping third-party repository sync");
+            return Ok(());
+        }
+
         debug!("Syncing all github and gitlab repositories");
 
         for integration in integration
@@ -253,6 +258,11 @@ impl SchedulerGithubGitlabJob {
         repository: Arc<dyn ThirdPartyRepositoryService>,
         job: Arc<dyn JobService>,
     ) -> tabby_schema::Result<()> {
+        if Config::load().unwrap_or_default().scheduler.disabled {
+            debug!("Scheduler disabled via config, skipping GitHub/GitLab repository indexing");
+            return Ok(());
+        }
+
         let repositories = repository
             .list_repositories_with_filter(None, None, Some(true), None, None, None, None)
             .await?;

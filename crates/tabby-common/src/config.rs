@@ -17,6 +17,9 @@ use crate::{
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Config {
     #[serde(default)]
+    pub scheduler: SchedulerConfig,
+
+    #[serde(default)]
     pub repositories: Vec<RepositoryConfig>,
 
     #[serde(default)]
@@ -36,6 +39,32 @@ pub struct Config {
 
     #[serde(default)]
     pub additional_languages: Vec<languages::Language>,
+}
+
+/// Controls automatic scheduling of indexing jobs.
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct SchedulerConfig {
+    /// When set to true, the scheduler never triggers indexing jobs automatically.
+    /// Use the API or CLI to index on demand.
+    /// Takes precedence over `cron` if both are set.
+    #[serde(default)]
+    pub disabled: bool,
+
+    /// Custom cron expression for the indexing schedule, replacing the default @hourly.
+    /// Uses 6-field cron syntax (seconds included), e.g.:
+    ///   "0 0 * * * *"   = every hour (same as default)
+    ///   "0 0 3 * * *"   = every day at 03:00
+    ///   "0 0 3 * * 0"   = every Sunday at 03:00
+    ///   "0 0 3 1 * *"   = first day of each month at 03:00
+    /// If absent, defaults to @hourly.
+    #[serde(default)]
+    pub cron: Option<String>,
+}
+
+impl SchedulerConfig {
+    pub fn cron_schedule(&self) -> &str {
+        self.cron.as_deref().unwrap_or("@hourly")
+    }
 }
 
 impl Config {
